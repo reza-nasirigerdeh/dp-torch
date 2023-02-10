@@ -92,7 +92,7 @@ python3 simulate.py --dataset cifar10 --model densenet20x16_ln --activation mish
                     --epochs 80 --run 1
 ```
 
-**Example3**: Train group normalized version of DenseNet20x16 with relu activation on Imagenette with cross-entropy loss function, SGD optimizer with learning rate of 1.0, 
+**Example3**: Train group normalized version of DenseNet20x16 with ReLU activation on Imagenette with cross-entropy loss function, SGD optimizer with learning rate of 1.0, 
 batch size of 512, epsilon of 8.0, delta value of 1e-5, and clipping value of 1.0 for 100 epochs:
 
 ```
