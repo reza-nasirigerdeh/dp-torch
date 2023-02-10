@@ -1,6 +1,6 @@
 # dp-torch
 **dp-torch** is simulation framework based on PyTorch and Opacus to compare the performance of popular convolutional neural networks such as **ResNets** and 
-**DenseNets** using different normalization layers including **LayerNorm**, **GroupNorm**, and **NoNorm** as baseline.
+**DenseNets** using different normalization layers including **LayerNorm**, **GroupNorm**, and **NoNorm** as baseline in **differentially private training**.
 
 **The code of KernelNorm, our proposed normalization layer, is coming soon.**
 
