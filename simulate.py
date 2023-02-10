@@ -83,7 +83,7 @@ def main():
 
     parser.add_argument("--epochs", "--epochs", type=int, help="number of epochs ", default=50)
 
-    parser.add_argument("--decay_epochs", "--decay-epochs", type=str, help="comma separated list of decay epochs ", default='50,70')
+    parser.add_argument("--decay_epochs", "--decay-epochs", type=str, help="comma separated list of decay epochs ", default='1000,1500')
 
     args = parser.parse_args()
 
@@ -270,11 +270,8 @@ def main():
         generator=gpu_generator,
     )
 
-    if args.dataset_name == 'imagenet32x32':
-        scheduler = torch.optim.lr_scheduler.StepLR(optim,  step_size=1, gamma=0.99, verbose=True)
-    else:
-        decay_epochs = [int(epoch) for epoch in args.decay_epochs.split(',')]
-        scheduler = torch.optim.lr_scheduler.MultiStepLR(optim, milestones=decay_epochs, gamma=0.5, verbose=True)
+    decay_epochs = [int(epoch) for epoch in args.decay_epochs.split(',')]
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optim, milestones=decay_epochs, gamma=0.5, verbose=True)
 
     train_loader = wrap_data_loader(
         data_loader=train_loader, max_batch_size=max_physical_bs, optimizer=optim
