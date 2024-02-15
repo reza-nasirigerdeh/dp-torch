@@ -1,34 +1,13 @@
-"""
-    Copyright 2023 Reza NasiriGerdeh and Georgios Kaissis. All Rights Reserved.
-
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-
-        http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-"""
-
 import random
 import warnings
-import math
-import argparse
-import torch
-import os
-import wget
-import tarfile
-
-
 from collections import defaultdict
 
+warnings.filterwarnings("ignore")
 from statistics import mean
+import math
 
 import numpy as np
+import torch
 from functorch import grad, make_functional_with_buffers, vmap
 from opacus.accountants.utils import get_noise_multiplier
 from opacus.data_loader import DPDataLoader
@@ -36,16 +15,28 @@ from opacus.optimizers import DPOptimizer
 from opacus.utils.batch_memory_manager import wrap_data_loader
 from torch.utils.data import DataLoader
 from torchmetrics.functional import accuracy
-from torchvision.datasets import CIFAR10, ImageFolder
+from torchvision.datasets import CIFAR10, CIFAR100, ImageFolder
 from torchvision.transforms import Compose, ToTensor, Normalize, Resize, RandomCrop, RandomHorizontalFlip, ColorJitter, RandomVerticalFlip
+from torchvision.transforms.functional import rotate
 from tqdm import tqdm
 
-from models.resnet8 import resnet8_nn, resnet8_ln, resnet8_gn
-from models.densenet import densenet20x16_nn, densenet20x16_ln, densenet20x16_gn
-from models.preact_resnet import preact_resnet18_nn, preact_resnet18_ln, preact_resnet18_gn
-from utils import ResultFile
+import argparse
 
-warnings.filterwarnings("ignore")
+from models.resnet8 import resnet8_nn, resnet8_ln, resnet8_gn
+from models.resnet8_kn import resnet8_kn
+
+from models.densenet import densenet20x16_nn, densenet20x16_ln, densenet20x16_gn
+from models.densenet_kn import densenet20x16_kn
+
+from models.preact_resnet import preact_resnet18_nn, preact_resnet18_ln, preact_resnet18_gn
+from models.resnet import resnet18_ln, resnet18_gn
+
+from models.resnet13_kn import resnet13_kn
+
+from models.preact_resnet_kn import preact_resnet18_kn
+from models.knresnet import knresnet18
+
+from utils import ResultFile
 
 
 def main():
@@ -56,7 +47,7 @@ def main():
 
     parser.add_argument("--dataset_name", "--dataset", type=str, help="dataset name", default="cifar10")
 
-    parser.add_argument("--model_name", "--model", type=str, help="Model to be trained", default="resnet8_nn")
+    parser.add_argument("--model_name", "--model", type=str, help="Model to be trained", default="resnet8_kn")
 
     parser.add_argument("--activation", "--activation", type=str, help="activation function", default="relu")
 
@@ -76,6 +67,8 @@ def main():
 
     parser.add_argument("--delta", "--delta", type=float, help="delta value", default=1e-5)
 
+    parser.add_argument("--accountant", "--accountant", type=str, help="gdp | rdp", default="gdp")
+
     parser.add_argument("--aug-mul", "--aug_mul", type=int, help="augmentation multiplicity", default=1)
 
     parser.add_argument("--run_number", "--run", type=int,
@@ -83,7 +76,7 @@ def main():
 
     parser.add_argument("--epochs", "--epochs", type=int, help="number of epochs ", default=50)
 
-    parser.add_argument("--decay_epochs", "--decay-epochs", type=str, help="comma separated list of decay epochs ", default='1000,1500')
+    parser.add_argument("--decay_epochs", "--decay-epochs", type=str, help="comma separated list of decay epochs ", default='50,70')
 
     args = parser.parse_args()
 
@@ -97,6 +90,7 @@ def main():
     target_epsilon = args.epsilon
     target_delta = args.delta
     clip_norm = args.clipping
+    privacy_accountant = args.accountant
 
     if deterministic:
         print("Determinism makes things slower.")
@@ -113,12 +107,17 @@ def main():
         gpu_generator = torch.Generator(device=device)
 
     # ########## Dataset ######################
+    num_classes = -1
     if args.dataset_name == 'cifar10':
         num_classes = 10
-        cifar10_mean = (0.4914, 0.4822, 0.4465)
-        cifar10_std = (0.2471, 0.2435, 0.2616)
-        train_trans = Compose([ToTensor(), Normalize(cifar10_mean, cifar10_std)])
-        test_trans = Compose([ToTensor(), Normalize(cifar10_mean, cifar10_std)])
+        if 'ln' in args.model_name or 'gn' in args.model_name:
+            cifar10_mean = (0.4914, 0.4822, 0.4465)
+            cifar10_std = (0.2471, 0.2435, 0.2616)
+            train_trans = Compose([ToTensor(), Normalize(cifar10_mean, cifar10_std)])
+            test_trans = Compose([ToTensor(), Normalize(cifar10_mean, cifar10_std)])
+        else:
+            train_trans = Compose([ToTensor()])
+            test_trans = Compose([ToTensor()])
 
         train_ds = CIFAR10(
             "./data",
@@ -131,37 +130,68 @@ def main():
             train=False,
             transform=test_trans)
 
+    elif args.dataset_name == 'cifar100':
+        num_classes = 100
+        if 'ln' in args.model_name or 'gn' in args.model_name:
+            cifar100_mean = (0.5071, 0.4865, 0.4409)
+            cifar100_std = (0.2673, 0.2564, 0.2762)
+            train_trans = Compose([ToTensor(), Normalize(cifar100_mean, cifar100_std)])
+            test_trans = Compose([ToTensor(), Normalize(cifar100_mean, cifar100_std)])
+        else:
+            train_trans = Compose([ToTensor()])
+            test_trans = Compose([ToTensor()])
+
+        train_ds = CIFAR100(
+            "./data",
+            train=True,
+            download=True,
+            transform=train_trans)
+
+        val_ds = CIFAR100(
+            "./data",
+            train=False,
+            transform=test_trans)
+
     elif args.dataset_name == 'imagenette':
-        # if imagenette-160px has not already been downloaded
-        if not os.path.exists('./data/imagenette2-160'):
-            # download imagenette-160px dataset
-            print("Downloading the dataset ...")
-            file_path = wget.download(url='https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-160.tgz',
-                                      out='./data')
-
-            # extract tgz file
-            print("Extracting the dataset ...")
-            tar = tarfile.open(name=file_path, mode="r:gz")
-            tar.extractall(path='./data')
-            tar.close()
-
         num_classes = 10
-        imagenet_mean = (0.485, 0.456, 0.406)
-        imagenet_std = (0.229, 0.224, 0.225)
-        train_trans = Compose([Resize((128, 128)),
-                               ToTensor(),
-                               Normalize(imagenet_mean, imagenet_std)
-                               ])
-        test_trans = Compose([Resize((128, 128)),
-                              ToTensor(),
-                              Normalize(imagenet_mean, imagenet_std)
-                              ])
+        if 'ln' in args.model_name or 'gn' in args.model_name:
+            imagenet_mean = (0.485, 0.456, 0.406)
+            imagenet_std = (0.229, 0.224, 0.225)
+            train_trans = Compose([Resize((128, 128)),
+                                   ToTensor(),
+                                   Normalize(imagenet_mean, imagenet_std)
+                                   ])
+            test_trans = Compose([Resize((128, 128)),
+                                  ToTensor(),
+                                  Normalize(imagenet_mean, imagenet_std)
+                                  ])
+        else:
+            train_trans = Compose([Resize((128, 128)), ToTensor()])
+            test_trans = Compose([Resize((128, 128)), ToTensor()])
 
         train_ds = ImageFolder(root='./data/imagenette2-160/train', transform=train_trans)
         val_ds = ImageFolder(root='./data/imagenette2-160/val', transform=test_trans)
 
+    elif args.dataset_name == 'imagenet32x32':
+        num_classes = 1000
+        if 'ln' in args.model_name or 'gn' in args.model_name:
+            imagenet_mean = (0.485, 0.456, 0.406)
+            imagenet_std = (0.229, 0.224, 0.225)
+            train_trans = Compose([ToTensor(),
+                                   Normalize(imagenet_mean, imagenet_std)
+                                   ])
+            test_trans = Compose([ToTensor(),
+                                  Normalize(imagenet_mean, imagenet_std)
+                                  ])
+        else:
+            train_trans = Compose([ToTensor()])
+            test_trans = Compose([ToTensor()])
+
+        print('Loading Imagenet32x32 ...')
+        train_ds = ImageFolder(root='./data/imagenet32x32/train', transform=train_trans)
+        val_ds = ImageFolder(root='./data/imagenet32x32/val', transform=test_trans)
     else:
-        print("Dataset name must be cifar10|imagenette!")
+        print("Dataset name must be cifar10|imagenette|imagenet32x32!")
         exit()
 
     train_loader = DataLoader(
@@ -199,6 +229,8 @@ def main():
         model = resnet8_ln(num_classes=num_classes, activation=activation)
     elif args.model_name == 'resnet8_gn':
         model = resnet8_gn(num_classes=num_classes, group_size=args.group_size, activation=activation)
+    elif args.model_name == 'resnet8_kn':
+        model = resnet8_kn(num_classes=num_classes, activation=activation, knconv_dropout_p=0.1, kn_dropout_p=0.25)
 
     elif args.model_name == 'densenet20x16_nn':
         model = densenet20x16_nn(num_classes=num_classes, activation=activation)
@@ -206,6 +238,8 @@ def main():
         model = densenet20x16_ln(num_classes=num_classes, activation=activation)
     elif args.model_name == 'densenet20x16_gn':
         model = densenet20x16_gn(num_classes=num_classes, group_size=args.group_size, activation=activation)
+    elif args.model_name == 'densenet20x16_kn':
+        model = densenet20x16_kn(num_classes=num_classes, activation=activation, knconv_dropout_p=0.1, kn_dropout_p=0.5)
 
     elif args.model_name == 'preact_resnet18_nn':
         model = preact_resnet18_nn(num_classes=num_classes, activation=activation)
@@ -213,6 +247,18 @@ def main():
         model = preact_resnet18_ln(num_classes=num_classes, activation=activation)
     elif args.model_name == 'preact_resnet18_gn':
         model = preact_resnet18_gn(num_classes=num_classes, group_size=args.group_size, activation=activation)
+    elif args.model_name == 'preact_resnet18_kn':
+        model = preact_resnet18_kn(num_classes=num_classes, knconv_dropout_p=0.1, kn_dropout_p=0.5, activation=activation)
+
+    elif args.model_name == 'resnet18_ln':
+        model = resnet18_ln(num_classes=num_classes, activation=activation)
+    elif args.model_name == 'resnet18_gn':
+        model = resnet18_gn(num_classes=num_classes, num_groups=32, activation=activation)
+    elif args.model_name == 'knresnet18':
+        model = knresnet18(num_classes=num_classes, block_dropout_p=0.05, final_dropout_p=0.25, activation=activation, low_resolution=True)
+
+    elif args.model_name == 'resnet13_kn':
+        model = resnet13_kn(num_classes=num_classes, activation=activation, knconv_dropout_p=0.1, kn_dropout_p=0.5)
 
     else:
         print("Model name can be resnet8_nn|resnet8_ln|resnet8_gn|resnet8_kn or"
@@ -241,7 +287,7 @@ def main():
         target_delta=target_delta,
         sample_rate=1 / len(train_loader),
         epochs=epochs,
-        accountant="gdp",
+        accountant=privacy_accountant,
     )
 
     print(model)
