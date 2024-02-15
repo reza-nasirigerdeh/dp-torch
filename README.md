@@ -85,40 +85,49 @@ pip3 install -r requirements.txt  -f https://download.pytorch.org/whl/torch_stab
 | activation function (e.g. Mish)                                 | --activation mish |
 
 # Run
-**Example1**: Train non-normalized version of ResNet-8 with Mish activation on CIFAR-10 with cross-entropy loss function, SGD optimizer with learning rate of 1.0, 
-batch size of 512, epsilon of 8.0, delta value of 1e-5, and clipping value of 1.0 for 100 epochs (GDP privacy accountant):
+**Example1**: Train non-normalized version of ResNet-8 with Mish activation on CIFAR-10 with cross-entropy loss function, 
+SGD optimizer with learning rate of 1.0 (divide at epoch 70), batch size of 512, epsilon of 8.0, delta value of 1e-5, and clipping value of 1.0 for 100 epochs (GDP privacy accountant):
 
 ```
 python3 simulate.py --dataset cifar10 --model resnet8_nn --activation mish \
                     --epsilon 8.0 --delta 1e-5 --learning-rate 1.0 --batch-size 512 --clipping 1.0 \
-                    --epochs 100 --accountant gdp --run 1
+                    --epochs 100 --decay-epochs 70 --accountant gdp --run 1
 ```
 
-**Example2**: Train layer normalized version of DenseNet-20x16 with Mish activation on CIFAR-10 with cross-entropy loss function, SGD optimizer with learning rate of 1.0, 
-batch size of 1024, epsilon of 6.0, delta value of 1e-5, and clipping value of 1.5 for 80 epochs (RDP privacy accountant):
+**Example2**: Train layer normalized version of DenseNet-20x16 with Mish activation on CIFAR-10 with cross-entropy loss function, 
+SGD optimizer with learning rate of 1.5 (divide it by 2 at epochs 60 and 80), batch size of 1024, epsilon of 6.0, delta value of 1e-5, and clipping value of 1.5 for 80 epochs (RDP privacy accountant):
 
 ```
 python3 simulate.py --dataset cifar10 --model densenet20x16_ln --activation mish \
-                    --epsilon 6.0 --delta 1e-5 --learning-rate 1.0 --batch-size 1024 --clipping 1.5 \
-                    --epochs 80 --accountant rdp --run 1
+                    --epsilon 6.0 --delta 1e-5 --learning-rate 1.5 --batch-size 1024 --clipping 1.5 \
+                    --epochs 80 --decay-epochs 60,80 --accountant rdp --run 1
 ```
 
-**Example3**: Train group normalized version of DenseNet-20x16 with ReLU activation on Imagenette with cross-entropy loss function, SGD optimizer with learning rate of 1.5, 
-batch size of 512, epsilon of 8.0, delta value of 1e-5, and clipping value of 1.0 for 100 epochs (GDP privacy accountant):
+**Example3**: Train group normalized version of DenseNet-20x16 with ReLU activation on Imagenette with cross-entropy loss function, 
+SGD optimizer with learning rate of 1.5 (divide it by 2 at epochs 50 and 70), batch size of 512, epsilon of 8.0, delta value of 1e-5, and clipping value of 1.0 for 100 epochs (GDP privacy accountant):
 
 ```
 python3 simulate.py --dataset imagenette --model preact_resnet18_gn  --activation relu \
                     --epsilon 8.0 --delta 1e-5 --learning-rate 1.5 --batch-size 512 --clipping 1.0 \
-                    --epochs 100 --accountant gdp --run 1
+                    --epochs 100 --decay-epochs 50,70 --accountant gdp --run 1
 ```
 
-**Example4**: Train kernel normalized ResNet-13 with Mish activation on CIFAR-10 with cross-entropy loss function, SGD optimizer with learning rate of 2.0, 
-batch size of 4096, epsilon of 6.0, delta value of 1e-5, and clipping value of 1.5 for 100 epochs (RDP privacy accountant):
+**Example4**: Train kernel normalized ResNet-13 with Mish activation on CIFAR-10 with cross-entropy loss function, SGD optimizer with learning rate of 2.0 
+(divide it by 2 at epochs 50 and 75), batch size of 4096, epsilon of 6.0, delta value of 1e-5, and clipping value of 1.5 for 100 epochs (RDP privacy accountant):
 
 ```
 python3 simulate.py --dataset cifar10 --model resnet13_kn  --activation mish \
                     --epsilon 6.0 --delta 1e-5 --learning-rate 2.0 --batch-size 4096 --clipping 1.5 \
-                    --epochs 100 --accountant rdp --run 1
+                    --epochs 100 --decay-epochs 50,75 --accountant rdp --run 1
+```
+
+**Example5**: Train KNResNet-18 with Mish activation on ImageNet32x32 with cross-entropy loss function, SGD optimizer with learning rate of 4.0 
+(divide it by 2 at epochs 70 and 90), batch size of 8192, epsilon of 8.0, delta value of 8e-7, and clipping value of 2.0 for 100 epochs (RDP privacy accountant):
+
+```
+python3 simulate.py --dataset imagenet32x32 --model knresnet18  --activation mish \
+                    --epsilon 8.0 --delta 8e-7 --learning-rate 4.0 --batch-size 8192 --clipping 2.0 \
+                    --epochs 100 --decay-epochs 70,90 --accountant rdp --run 1
 ```
 
 ## Citation
