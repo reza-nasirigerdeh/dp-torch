@@ -1,8 +1,7 @@
-# dp-torch
-**dp-torch** is simulation framework based on PyTorch and Opacus to compare the performance of popular convolutional neural networks such as **ResNets** and 
-**DenseNets** using different normalization layers including **LayerNorm**, **GroupNorm**, and **NoNorm** as baseline in **differentially private training**.
+# DPTorch
+**DPTorch** is simulation framework based on PyTorch and Opacus to compare the performance of different normalization layers including **LayerNorm**, **GroupNorm**, our proposed **KernelNorm** and **NoNorm** as baseline 
+using  popular convolutional neural networks such as **ResNets** and **DenseNets** in **differentially private training**.
 
-**The code of KernelNorm, our proposed normalization layer, is coming soon.**
 
 # Requirements
 - Python +3.8
@@ -26,10 +25,12 @@ pip3 install -r requirements.txt  -f https://download.pytorch.org/whl/torch_stab
 
 # Options
 ### Dataset
-| Dataset              | option              |
-|:---------------------|:--------------------|
-| CIFAR-10             | --dataset cifar10   |
-| Imagenette 160-pixel | --dataset imagenette|
+| Dataset              | option                 |
+|:---------------------|:-----------------------|
+| CIFAR-10             | --dataset cifar10      |
+| Imagenette 160-pixel | --dataset imagenette   |
+| ImageNet32x32        | --dataset imagenet32x32|
+
 
 
 
@@ -37,33 +38,43 @@ pip3 install -r requirements.txt  -f https://download.pytorch.org/whl/torch_stab
 
 ### Model
 
-#### ResNet-8
-| Model                                               | option              |
-|:----------------------------------------------------|:--------------------|
-| ResNet8 with no normalization                       | --model resnet8_nn  |
-| ResNet8 with layer normalization                    | --model resnet8_ln  |
-| ResNet8 with group normalization (group size of 32) | --model resnet8_gn  |
+#### ResNets
+| Model                                                       | option              |
+|:------------------------------------------------------------|:--------------------|
+| ResNet-8 with no normalization                              | --model resnet8_nn  |
+| ResNet-8 with layer normalization                           | --model resnet8_ln  |
+| ResNet-8 with group normalization (group size of 32)        | --model resnet8_gn  |
+| ResNet-8 with kernel normalization                          | --model resnet8_kn  |
+| ResNet-18 with layer normalization                          | --model resnet18_ln |
+| ResNet-18 with group normalization (number of groups of 32) | --model resnet18_gn |
+| KNResNet-18  (kernel normalization)                         | --model knresnet18  |
+| ResNet-13 with kernel normalization                         | --model resnet13_kn |
 
 #### PreactResNet18
-| Model                                                      | option                        |
-|:-----------------------------------------------------------|:------------------------------|
-| PreactResNet18 with no normalization                       | --model preact_resnet18_nn    |
-| PreactResNet18 with layer normalization                    | --model preact_resnet18_ln    |
-| PreactResNet18 with group normalization (group size of 32) | --model preact_resnet18_gn    |        
+| Model                                                       | option                     |
+|:------------------------------------------------------------|:---------------------------|
+| PreactResNet-18 with no normalization                       | --model preact_resnet18_nn |
+| PreactResNet-18 with layer normalization                    | --model preact_resnet18_ln |
+| PreactResNet-18 with group normalization (group size of 32) | --model preact_resnet18_gn |        
+| PreactResNet-18 with kernel normalization                   | --model preact_resnet18_kn |
 
-#### ResNet-8
-| Model                                                     | option                   |
-|:----------------------------------------------------------|:-------------------------|
-| DenseNet20x16 with no normalization                       | --model densenet20x16_nn |
-| DenseNet20x16 with layer normalization                    | --model densenet20x16_ln |
-| DenseNet20x16 with group normalization (group size of 32) | --model densenet20x16_gn |
+#### DenseNet20x16
+| Model                                                      | option                   |
+|:-----------------------------------------------------------|:-------------------------|
+| DenseNet-20x16 with no normalization                       | --model densenet20x16_nn |
+| DenseNet-20x16 with layer normalization                    | --model densenet20x16_ln |
+| DenseNet-20x16 with group normalization (group size of 32) | --model densenet20x16_gn |
+| DenseNet-20x16 with kernel normalization                   | --model densenet20x16_kn |
+
 
 ### Differential privacy parameters
-| Description               | option            |
-|:--------------------------|:------------------|
-| epsilon value (e.g. 8.0)  | --epsilon 8.0     |
-| delta value (e.g. 1e-5)   | --delta 1e-5      |
-| clipping value (e.g. 1.5) | --clipping 1.5    |
+| Description                     | option           |
+|:--------------------------------|:-----------------|
+| epsilon value (e.g. 8.0)        | --epsilon 8.0    |
+| delta value (e.g. 1e-5)         | --delta 1e-5     |
+| clipping value (e.g. 1.5)       | --clipping 1.5   |
+| privacy accountant (gdp or rdp) | --accountant rdp |
+
 
 ### Other
 | Description                                                     | option            |
@@ -83,7 +94,7 @@ python3 simulate.py --dataset cifar10 --model resnet8_nn --activation mish \
                     --epochs 100 --run 1
 ```
 
-**Example2**: Train layer normalized version of DenseNet20x16 with Mish activation on CIFAR-10 with cross-entropy loss function, SGD optimizer with learning rate of 1.0, 
+**Example2**: Train layer normalized version of DenseNet-20x16 with Mish activation on CIFAR-10 with cross-entropy loss function, SGD optimizer with learning rate of 1.0, 
 batch size of 1024, epsilon of 6.0, delta value of 1e-5, and clipping value of 1.5 for 80 epochs:
 
 ```
@@ -92,7 +103,7 @@ python3 simulate.py --dataset cifar10 --model densenet20x16_ln --activation mish
                     --epochs 80 --run 1
 ```
 
-**Example3**: Train group normalized version of DenseNet20x16 with ReLU activation on Imagenette with cross-entropy loss function, SGD optimizer with learning rate of 1.0, 
+**Example3**: Train group normalized version of DenseNet-20x16 with ReLU activation on Imagenette with cross-entropy loss function, SGD optimizer with learning rate of 1.5, 
 batch size of 512, epsilon of 8.0, delta value of 1e-5, and clipping value of 1.0 for 100 epochs:
 
 ```
@@ -101,8 +112,17 @@ python3 simulate.py --dataset imagenette --model preact_resnet18_gn  --activatio
                     --epochs 100 --run 1
 ```
 
+**Example4**: Train kernel normalized ResNet-13 with Mish activation on CIFAR-10 with cross-entropy loss function, SGD optimizer with learning rate of 2.0, 
+batch size of 4096, epsilon of 6.0, delta value of 1e-5, and clipping value of 1.5 for 100 epochs:
+
+```
+python3 simulate.py --dataset cifar10 --model resnet13_kn  --activation mish \
+                    --epsilon 6.0 --delta 1e-5 --learning-rate 2.0 --batch-size 4096 --clipping 1.5 \
+                    --epochs 100 --run 1
+```
+
 ## Citation
-If you use **dp-torch** in your study, please cite the following paper: <br />
+If you use **dp-torch** in your study, please cite the following papers: <br />
    ```
 @inproceedings{
 nasirigerdeh2023knconvnets-ppml,
@@ -111,5 +131,14 @@ author={Reza Nasirigerdeh and Javad Torkzadehmahani and Daniel Rueckert and Geor
 booktitle={First IEEE Conference on Secure and Trustworthy Machine Learning},
 year={2023},
 url={https://openreview.net/forum?id=pyfGjjDmrC}
+}
+
+@article{
+    nasirigerdeh2024kernelnorm,
+    title={Kernel Normalized Convolutional Networks},
+    author={Reza Nasirigerdeh and Reihaneh Torkzadehmahani and Daniel Rueckert and Georgios Kaissis},
+    journal={Transactions on Machine Learning Research},
+    year={2024},
+    url={https://openreview.net/forum?id=Uv3XVAEgG6},
 }
    ```
