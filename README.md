@@ -86,7 +86,7 @@ pip3 install -r requirements.txt  -f https://download.pytorch.org/whl/torch_stab
 
 # Run
 **Example1**: Train non-normalized version of ResNet-8 with Mish activation on CIFAR-10 with cross-entropy loss function, SGD optimizer with learning rate of 1.0, 
-batch size of 512, epsilon of 8.0, delta value of 1e-5, and clipping value of 1.0 for 100 epochs:
+batch size of 512, epsilon of 8.0, delta value of 1e-5, and clipping value of 1.0 for 100 epochs (GDP privacy accountant):
 
 ```
 python3 simulate.py --dataset cifar10 --model resnet8_nn --activation mish \
@@ -95,7 +95,7 @@ python3 simulate.py --dataset cifar10 --model resnet8_nn --activation mish \
 ```
 
 **Example2**: Train layer normalized version of DenseNet-20x16 with Mish activation on CIFAR-10 with cross-entropy loss function, SGD optimizer with learning rate of 1.0, 
-batch size of 1024, epsilon of 6.0, delta value of 1e-5, and clipping value of 1.5 for 80 epochs:
+batch size of 1024, epsilon of 6.0, delta value of 1e-5, and clipping value of 1.5 for 80 epochs (RDP privacy accountant):
 
 ```
 python3 simulate.py --dataset cifar10 --model densenet20x16_ln --activation mish \
@@ -104,7 +104,7 @@ python3 simulate.py --dataset cifar10 --model densenet20x16_ln --activation mish
 ```
 
 **Example3**: Train group normalized version of DenseNet-20x16 with ReLU activation on Imagenette with cross-entropy loss function, SGD optimizer with learning rate of 1.5, 
-batch size of 512, epsilon of 8.0, delta value of 1e-5, and clipping value of 1.0 for 100 epochs:
+batch size of 512, epsilon of 8.0, delta value of 1e-5, and clipping value of 1.0 for 100 epochs (GDP privacy accountant):
 
 ```
 python3 simulate.py --dataset imagenette --model preact_resnet18_gn  --activation relu \
@@ -113,7 +113,7 @@ python3 simulate.py --dataset imagenette --model preact_resnet18_gn  --activatio
 ```
 
 **Example4**: Train kernel normalized ResNet-13 with Mish activation on CIFAR-10 with cross-entropy loss function, SGD optimizer with learning rate of 2.0, 
-batch size of 4096, epsilon of 6.0, delta value of 1e-5, and clipping value of 1.5 for 100 epochs:
+batch size of 4096, epsilon of 6.0, delta value of 1e-5, and clipping value of 1.5 for 100 epochs (RDP privacy accountant):
 
 ```
 python3 simulate.py --dataset cifar10 --model resnet13_kn  --activation mish \
