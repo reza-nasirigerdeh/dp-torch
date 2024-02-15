@@ -11,10 +11,6 @@ using  popular convolutional neural networks such as **ResNets** and **DenseNets
 # Installation
 Clone the dp-torch repository:
 ```
-git clone https://github.com/reza-nasirigerdeh/dp-torch
-```
-or 
-```
 git clone git@github.com:reza-nasirigerdeh/dp-torch.git
 ```
 
