@@ -130,7 +130,7 @@ python3 simulate.py --dataset imagenet32x32 --model knresnet18  --activation mis
 The video presentations of the KernelNorm related papers are available at YouTube:
 
 KernelNorm: https://youtu.be/V7fQTc6MNSE </br >
-KernelNorm for Privacy-preserving machine learning: https://youtu.be/WB5l2IZSPxM?si=nQvVU2NN_w8SAjPw
+KernelNorm for privacy-preserving machine learning: https://youtu.be/WB5l2IZSPxM?si=nQvVU2NN_w8SAjPw
 
 ## Citation
 If you use **dp-torch** in your study, please cite the following papers: <br />
